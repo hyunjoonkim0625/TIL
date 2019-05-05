@@ -121,10 +121,259 @@ let c: Color = Color.Green;
 console.log(c);   // 6을 출력
 ```
 
+[더 많은 사용의 예시](https://www.notion.so/Enum-Types-d1765ed16f5648d0a68fd7acbbbdeeef)
+
 **Any** 타입은 변수가 어떤 타입을 가져야 할지 명확하지 않을 때 사용할 수 있겠다.
 
 ```js
 let randomValue: any = 10;
 randomValue = true;
 randomValue = "Hello World";
+```
+
+하지만, 밑에와 같이 작성한 코드들에 대해서는 에러가 발생하지 않는다:
+
+```js
+let myVariable: any = 10;
+
+console.log(myVariable.name);
+myVariable();
+myVariable.toUpperCase();
+```
+
+타입스크립트 3.0에서는 Unknown이라는 타입을 새로 내놓게 된다.
+
+**Unknown** 타입은 any 타입과 거의 비슷하나 unknown 타입이 지정된 변수에는 접근하지 못한다. 이 뜻은 타입을 확정해주지 않으면 다른 곳에 할당할 수 없고, 사용할 수 없다.
+
+```js
+let myVariable: unknown = 10;
+
+// 이 밑의 코드들에는 에러가 발생한다.
+console.log(myVariable.name);
+myVariable();
+myVariable.toUpperCase();
+```
+
+이를 피하고 싶다면 아래와 같이 코드를 작성할 수 있다:
+
+```js
+// myVariable 변수는 스트링 취급을 받는다고 명해주는 것
+(myVariable as string).toUpperCase()
+```
+
+**또한, 유저가 직접 타입의 성격을 작성하여 사용할 수도 있다**
+
+```js
+// name 속성이 object 안에 존재하는가에 대한 확인을 하는 함수
+function hasName(obj: any): obj is { name: string } {
+  return !!obj && typeof obj === "object" && "name" in obj;
+}
+```
+
+**[더 자세한 예시](https://www.notion.so/Type-Guard-4601863eaa6c422e8b495e1bb4ba75eb)**
+
+**한 변수에 여러 타입(union types)을 지정할 수도 있다**
+Any 타입을 사용할 수도 있는데 왜 굳이 union 타입을 사용할까?
+
+- Union 타입은 타입의 종류를 제한할 수 있는 반면에, any 타입은 어떠한 타입이던 접근할 수가 있다.
+- Any 타입은 어떠한 intellisense의 도움을 받을 수 없다.
+
+```js
+let multiType: number | boolean;
+
+multiType = 20;
+multiType = true;
+```
+
+---
+
+### Functions
+
+함수를 작성하는데 있어서도 정적인 타입 체크가 가능하다.
+
+```js
+function add(num1: number, num2: number) {
+  return num1 + num2;
+}
+
+add(5, 10);
+add("5", 10); // Error: Argument of type '"5"' is not assignable to parameter of type 'number'.
+```
+
+어떤 값을 리턴할 것인지에 대한 명시도 가능하다.
+
+```js
+function add(num1: number, num2: number): number {
+  return num1 + num2;
+}
+// 위의 함수는 number 타입을 리턴할 것이다
+```
+
+`?`를 사용하여 add 함수의 파라미터(num2)가 undefined여도 여전히 함수를 불러올 수 있다.
+
+```js
+function add(num1: number, num2?: number): number {
+  return num1 + num2;
+}
+```
+
+첫 번째 파라미터는 optional(`?`)로 지정될 수 없기에, 특정한 파라미터가 optional이 되길 원한다면, 파라미터의 선언 순서를 바꿔야 한다.
+
+파라미터에 default value를 지정해 주면:
+
+```js
+function add(num1: number, num2: number = 10): number {
+  if (num2) return num1 + num2;
+  else return num1;
+}
+
+add(5, 10); // 함수가 15를 반환한다
+add(5); // 파라미터로 5만 주어졌어도, num2의 default value가 10이기 때문에 여전히 15를 반환한다
+```
+
+---
+
+### Interface
+
+이런 간단한 함수라면, 크게 문제 될 것이 없지만:
+
+```js
+function fullName(person: { firstName: string, lastName: string }) {
+  console.log(`${person.firstName} ${person.lastName}`);
+}
+
+let p = {
+  firstName: "Bruce",
+  lastName: "Wayne"
+};
+
+fullName(p); // Bruce Wayne
+```
+
+하지만, 많은 변수 혹은 함수들이 추가되고 이를 관리하는 데 있어서는 interface를 이용하여 타입 체킹을 해주는 것이 더욱 용이하다:
+
+```js
+interface Person {
+  firstName: string;
+  lastName: string;
+}
+
+function fullName(person: Person) {
+  console.log(`${person.firstName} ${person.lastName}`);
+}
+
+let p = {
+  firstName: "Bruce",
+  lastName: "Wayne" // ?를 사용하여 optional로 적용시키는 것도 가능
+};
+
+fullName(p); // Bruce Wayne
+```
+
+위와 같이 interface를 따로 작성해주면, interface의 재사용이 더욱 쉬울 뿐만 아니라 이곳에서 일어나는 변경은 Person interfacre를 사용하는 모든 곳에 적용될 것이기 때문에 유지/보수에도 더욱 용이하다.
+
+---
+
+### Class
+
+Employee라는 클래스를 생성해보자:
+
+```js
+class Employee {
+  employeeName: string;
+
+  // to initialize the employeeName
+  constructor(name: string) {
+    this.employeeName = name;
+  }
+
+  greet() {
+    console.log(`Good Morning ${this.employeeName}`);
+  }
+}
+
+let emp1 = new Employee("Joon");
+
+console.log(emp1.employeeName); // Joon
+emp1.greet(); // Good Morning Joon
+```
+
+위의 Employee 클래스를 상속받아 Manager라는 클래스를 생성해보자:
+
+```js
+// Employee를 상속받아서 Manager라는 클래스를 생성하자
+class Manager extends Employee {
+  constructor(managerName: string) {
+    // Employee의 클래스 생성자를 사용하기 위해, super 키워드를 사용하자
+    super(managerName);
+  }
+
+  delegateWork() {
+    console.log(`Manager delegating tasks`);
+  }
+}
+
+let m1 = new Manager("Joon Kim");
+
+// Employee를 상속받았기 때문에 m1이 Employee의 클래스 속성들에 접근할 수가 있다
+m1.delegateWork(); // Manager delegating tasks
+m1.greet(); // Good Morning Joon Kim
+console.log(m1.employeeName); // Joon Kim
+```
+
+---
+
+### Access Modifiers
+
+Access modifiers는 클래스의 속성과 메소드에 대한 접근을 구성하는 키워드(public, private, protected)라고 볼 수 있다.
+
+Default 설정으로는 public 설정이 되어있으며, 이는 프로그램 내에서 자유롭게 클래스 내의 속성들이나 메소드들에 접근을 할 수 있음을 뜻한다. 아니면 `public` 키워드를 사용하여 설정해줄 수 있다.
+
+```js
+class Employee {
+  public employeeName: string;
+
+  // to initialize the employeeName
+  constructor(name: string) {
+    this.employeeName = name;
+  }
+
+  greet() {
+    console.log(`Good Morning ${this.employeeName}`);
+  }
+}
+```
+
+속성에 `private` 키워드를 지정해주면, 클래스 내에서만 해당 속성에 접근할 수 있다.
+
+```js
+class Employee {
+  private employeeName: string;
+
+  // to initialize the employeeName
+  constructor(name: string) {
+    this.employeeName = name;
+  }
+
+  greet() {
+    console.log(`Good Morning ${this.employeeName}`); // 에러 발생하지 않음
+  }
+}
+
+let emp1 = new Employee("Joon");
+
+console.log(emp1.employeeName); // Error: Property 'employeeName' is private and only accessible within class 'Employee'.
+
+// Employee를 상속받아서 Manager라는 클래스를 생성하자
+class Manager extends Employee {
+  constructor(managerName: string) {
+    // Employee의 클래스 생성자를 사용하기 위해, super 키워드를 사용하자
+    super(managerName);
+  }
+
+  delegateWork() {
+    console.log(`Manager delegating tasks ${this.employeeName}`); // Error: Property 'employeeName' is private and only accessible within class 'Employee'.
+  }
+}
+
 ```
