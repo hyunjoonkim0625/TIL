@@ -377,3 +377,7 @@ class Manager extends Employee {
 }
 
 ```
+
+상속받은 클래스 내에서 employeeName을 사용하고 싶다면 `protected` 키워드를 사용하자. 이는 여전히 클래스 밖에서의 접근은 방지하지만 클래스 내에서의 속성 접근은 허용한다.
+
+---
