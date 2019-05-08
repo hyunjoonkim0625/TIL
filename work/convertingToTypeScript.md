@@ -92,3 +92,42 @@ state = {
 `as` 구문을 사용하여 IClub의 타입값을 강제시켜버렸다.
 
 다른 방법도 생각해봐야지.
+
+## target vs. currentTarget
+
+아래의 핸들러에서 `value`부분에 에러가 발생했는데:
+
+```js
+handleChange = (event: React.FormEvent<HTMLInputElement>): void => {
+  this.setState({
+    value: event.target.value
+  });
+};
+
+// ... render() ...
+
+<form className="Search" onSubmit={this.props.handleSearch(this.state.value)}>
+  <input
+    className="Search__input"
+    value={this.state.value}
+    onChange={this.handleChange}
+    placeholder="클럽명 검색"
+    type="search"
+  />
+  <input className="Search__submit" type="submit" value="검색" />
+</form>;
+```
+
+에러메세지는 `Property 'value' does not exist on type 'EventTarget'.`이다. 즉, value가 target에 존재하지 않는다라고 볼 수 있다. `target`은 input의 value가 아닌 그것을 감싸고 있는 `form`에서 value값을 찾기 때문이라고 생각한다. 그래서:
+
+```js
+handleChange = (event: React.FormEvent<HTMLInputElement>): void => {
+  this.setState({
+    value: event.currentTarget.value
+  });
+};
+```
+
+으로 수정했더니 에러가 없어졌다. `currentTarget`은 핸들러가 할당된 그 요소에서 value를 찾을 것이기 때문에 내가 원하는 방식의 작동은 `currentTarget`을 사용하여 input 요소의 value 값을 찾는 것이다.
+
+---
