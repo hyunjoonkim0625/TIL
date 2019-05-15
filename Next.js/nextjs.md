@@ -273,3 +273,24 @@ Next.js 공부 노트 관련 요약입니다. 트레바리 개발자 양종훈�
 * Styling
   - 기본 built-in 스타일링 기법으로 styled-jsx를 지원, \_document.js 파일의 `getInitialProps`에서 flush (`import flush from 'styled-jsx/server`) 함수를 실행하고 이를 styles로 props로 내려주면 서버사이드에서 스타일링의 연산을 실행해준다(기본적으로 styled-jsx는 클라이언트에서만 작동)
   - `@zeit/css`, `@zeit/scss` 등을 통해 해당 스타일링도 사용할 수 있게 제공하며, 서버에서 먼저 연산이 필요하다면 \_document에 빌드한 파일을 전달하는 식으로 사용할 수 있다.
+
+---
+
+## Shallow Routing
+
+같은 페이지에서의 이동이 일어날 때, getInitialProps가 다시 작동되는 것을 방지하기 위해서 이와 같은 방법을 사용할 수 있다:
+
+```js
+import { withRouter, WithRouterProps } from "next/router"
+
+// ...
+
+<Link href="/faq" shallow={router.asPath === "/faq"}>
+
+// ...
+
+export default withRouter(Footer)
+
+```
+
+위 코드의 뜻은, `"/faq"`의 위치에서는 또 다시 getInitialProps를 실행시키지 않는다는 것이다. 이로 인해 불필요한 낭비를 줄일 수 있다.

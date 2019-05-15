@@ -131,3 +131,7 @@ handleChange = (event: React.FormEvent<HTMLInputElement>): void => {
 으로 수정했더니 에러가 없어졌다. `currentTarget`은 핸들러가 할당된 그 요소에서 value를 찾을 것이기 때문에 내가 원하는 방식의 작동은 `currentTarget`을 사용하여 input 요소의 value 값을 찾는 것이다.
 
 ---
+
+## 무한 스크롤 등, setState을 많이 불러올 수 있는 것들에 대한 처리
+
+[정보의 출처: https://webclub.tistory.com/607](https://webclub.tistory.com/607)
