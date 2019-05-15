@@ -135,3 +135,7 @@ handleChange = (event: React.FormEvent<HTMLInputElement>): void => {
 ## 무한 스크롤 등, setState을 많이 불러올 수 있는 것들에 대한 처리
 
 [정보의 출처: https://webclub.tistory.com/607](https://webclub.tistory.com/607)
+
+## setState의 별로인 점
+
+[정보의 출처: https://blog.cloudboost.io/3-reasons-why-i-stopped-using-react-setstate-ab73fc67a42e](https://blog.cloudboost.io/3-reasons-why-i-stopped-using-react-setstate-ab73fc67a42e)

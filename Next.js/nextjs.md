@@ -294,3 +294,49 @@ export default withRouter(Footer)
 ```
 
 위 코드의 뜻은, `"/faq"`의 위치에서는 또 다시 getInitialProps를 실행시키지 않는다는 것이다. 이로 인해 불필요한 낭비를 줄일 수 있다.
+
+---
+
+## mapped type 사용의 예
+
+개발 과제에 nextjs를 적용 중:
+
+```js
+
+const Footer: NextFunctionComponent = ({ router }) => {
+  console.log(router.asPath);
+  return (
+    <div className="Footer">
+      <div className="Footer__vision">
+        <span>세상을 더 지적으로 사람들을 더 친하게</span>
+        <Link href="/faq" shallow={router.asPath === "/faq"}>
+
+// more codes...
+
+```
+
+위의 상태에서는 router에 타입을 지정하라고 난리친다!
+
+이를 해결할 수 있는 방법 중 하나는:
+
+```js
+// next/router에서 선언되어 있는 WithRouterProps의 타입 설정을 가져오는 것
+import { withRouter, WithRouterProps } from "next/router";
+
+
+// type에 적용시키기 위한 빈 type 객체의 선언
+// interface를 이용한 type 선언에는 최대한 많은 타입(사용이 될 모든 타입)을 선언하는 것이 좋다
+interface OwnProps {
+
+}
+
+type CombineProps = OwnProps & Required<WithRouterProps>
+
+// 위와 같이 OwnProps에 <WithRouterProps>를 필요하게 끔 만들어서 OwnProps가 결국 next/router에서 선언된 타입들을 가지게 하는 것
+
+// 이제 더 이상 빨간 줄이 보이지 않는다!
+const Footer: NextFunctionComponent<CombineProps> = ({ router }) => {
+  // ...
+```
+
+신기방기!
