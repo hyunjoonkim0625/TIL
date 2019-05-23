@@ -704,3 +704,203 @@ server.listen().then(({ url }) => console.log(`server started at ${url}`));
 그 후, `node index`(폴더 경로 내에서)로 서버를 실행시키면 `localhost:4000`으로 접속할 수가 있다.
 
 그 후에 쿼리 요청을 보내면서 이것저것을 해보자!
+
+**type check**
+
+Type checking의 종류에는:
+
+- query vs. mutation
+- objects
+- arrays
+- arguments
+
+- crud: create(mutation), read(query), update(mutation), delete(mutation)
+
+배열이 있을 때, 배열 안과 밖 모두에 null을 방지하고 싶을 때
+
+```js
+ type RegisterResponse {
+    //  [] -> a type that is in an array
+    // 안과 밖 모두에 '!'
+    errors: [Error!]!
+    user: User!
+  }
+
+```
+
+---
+
+**중복되는 파라미터의 작성**
+
+밑의 코드와 같이 중복으로 사용되는 파라미터가 있다:
+
+```js
+  type Mutation {
+    register(username: String!, password: String!, age: Int): RegisterResponse!
+
+    login(username: String!, password: String!, age: Int): Boolean!
+  }
+```
+
+이 경우에는 타입 정의에 밑에와 같은 코드를 작성해서 사용할 수 있다:
+
+```js
+  input UserInfo {
+    username: String!
+    password: String!
+    age: Int
+  }
+
+  // 위의 UserInfo를 타입으로 넣어주면 된다
+
+  type Mutation {
+    register(userInfo: UserInfo!): RegisterResponse!
+
+    login(userInfo: UserInfo): Boolean!
+  }
+```
+
+뮤테이션에서는 코드가 작성된 순서대로 작동한다.
+
+---
+
+**resolver**
+
+Resolver에는 네 가지의 파라미터가 들어올 수 있다. `parent, args, context, info`가 이 네 가지에 해당한다.
+
+우선 **args**는:
+
+```js
+ type Mutation {
+    register(userInfo: UserInfo): RegisterResponse!
+    login(userInfo: UserInfo): String!
+  }
+
+  // Mutation에 login이 정의되어 있기에 밑에 args 대신 분해대입 하여 사용할 수 있다
+
+
+ Mutation: {
+    login: (parent, {userInfo: {username}}, context, info) => {
+      return username
+    },
+```
+
+그 후에, 이렇게 요청을 보낼 수 있다:
+
+```js
+mutation {
+  login(userInfo: {username: "hey", password: "he12"})
+}
+```
+
+**context**는 resolver들에 대한 접근을 가능하게 해주는데:
+
+```js
+// 서버를 정의해 주는 곳에 context를 추가
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+  context: ({ req, res }) => ({ req, res })
+});
+```
+
+그 후에:
+
+```js
+  Mutation: {
+    login: (parent, { userInfo: { username } }, context, info) => {
+      console.log(context);
+
+  // console에 밑의 정보들이 나타날 것
+  // { req:
+  //  IncomingMessage {
+  //    _readableState:
+  //     ReadableState {
+  //       objectMode: false,
+  //       highWaterMark: 16384,
+  //       buffer: [Object],
+  //       length: 0,
+  //       pipes: null,
+  //       pipesCount: 0,
+  //       flowing: true,
+  //       ended: true,
+  //       endEmitted: true,
+  //       reading: false,
+  //       sync: false,
+
+```
+
+resolver 내에서는:
+
+```js
+  Mutation: {
+    login: async (parent, { userInfo: { username } }, context, info) => {
+      // resolver 내에서는 많은 것들을 할 수 있는데,
+      // 위에서 처럼 async를 사용하고 promise를 사용하는 등의 동작을 할 수 있다
+
+      // to check the password
+      // await checkPassword(password)
+      return username;
+```
+
+**info**는 라이브러리들을 사용할 때 많이 사용되곤 한다...
+
+**parent**가 정해지는 기준은, 밑의 코드를 예로 들었을 때:
+
+```js
+// resolvers의 맨 위에서 User라는 resolver를 작성했고,
+// 이에 대한 parent는
+const resolvers = {
+  // User의 resolver를 작성
+  User: {
+    username: parent => "i am username"
+  },
+
+  // codes ...
+
+  Mutation: {
+    login: async (parent, { userInfo: { username } }, context, info) => {
+      return username;
+    },
+    // 이곳에서 user가 User를 사용하여 먼저 실행이 되기 때문에,
+    // parent는 이 User가 실행 된 register가 되고,
+    // 이 안에 있는 user에 접근할 수가 있다
+    register: () => ({
+      errors: [
+        {
+          field: "username",
+          message: "bad"
+        },
+        {
+          field: "username2",
+          message: "bad2"
+        }
+      ],
+      user: {
+        id: 1,
+        username: "bob"
+      }
+    })
+  }
+};
+```
+
+**parent**는 많이 쓰이게 되는데:
+
+```js
+// 밑과 같이 필요한 경우에 사용할 수 있다
+const resolvers = {
+  // User의 resolver를 작성
+  // 이렇게 선언된 User의 resolver는 다른 곳에서 사용된
+  // User의 resolver를 덮어 쓸 것이다
+  // 왜냐면, 이 User resolver는 User가 실행될 때마다 return 될 것이기에
+
+  User: {
+    // type User에도 추가시켜야 한다
+    firstLetterOfUsername: parent => {
+      return parent.username[0];
+    }
+  },
+```
+
+---
