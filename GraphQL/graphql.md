@@ -378,3 +378,329 @@ const RootQuery = new GraphQLObjectType({
   }
 });
 ```
+
+---
+
+## Required fields (GraphQLNonNull)
+
+만약 작가에 대한 프로필을 추가하는 mutation을 요청할 때, age를 넘겨주지 않는다고 해도 그대로 요청이 들어갈 것이다. 혹은 반대로, name을 넘겨주지 않고 age만 적는 상황도 발생할 수 있다. 이를 방지하기 위해 `GraphQLNonNull`을 적용시켜보자.
+
+```js
+
+
+
+const Mutation = new GraphQLObjectType({
+  name: "Mutation",
+  fields: {
+    addAuthor: {
+      type: AuthorType,
+      args: {
+        // new GraphQLNonNull을 적용하자!
+        name: { type: new GraphQLNonNull(GraphQLString) },
+        age: { type: new GraphQLNonNull(GraphQLInt) }
+      },
+```
+
+---
+
+## 프론트엔드의 구성: 아폴로 클라이언트 사용
+
+GraphQL 쿼리 언어는 자바스크립트처럼 보이긴해도 자바스크립트가 아니기 때문에, 우리가 만들 앱과 GraphQL을 이어주기 위해서 Apollo를 사용하여 쿼리 요청을 서버에 보내게 할 것이다.
+
+```js
+import React from "react";
+import ApolloClient from "apollo-boost";
+import { ApolloProvider } from "react-apollo";
+
+import BookList from "./components/BookList";
+
+// apollo client setup
+
+const client = new ApolloClient({
+  uri: "http://localhost:4000/graphql"
+});
+
+function App() {
+  return (
+    <ApolloProvider client={client}>
+      <div id="main">
+        <h1>Reading List</h1>
+        <BookList />
+      </div>
+    </ApolloProvider>
+  );
+}
+
+export default App;
+```
+
+client라는 end point를 설정 후, provider에 prop으로 넘겨주고 이 provider 내에 다른 컴포넌트들을 포함시킨다.
+
+---
+
+## Making queries from React
+
+쿼리를 만들어 준 뒤에 컴포넌트에 그 쿼리를 적용시킨 뒤 사용하자. 쿼리 언어는 자바스크립트가 아니기 때문에, parsing을 도와줄 무언가가 필요하다.
+
+```js
+// parsing을 위한 importing
+import { gql } from "apollo-boost";
+
+// 요청을 위한 코드
+const getBooksQuery = gql`
+  {
+    books {
+      name
+      id
+    }
+  }
+`;
+```
+
+위와 같이 작성한 코드를 컴포넌트에 적용시키려면:
+
+```js
+// react-apollo로 부터 graphql을 불러온 뒤
+import { graphql } from "react-apollo";
+
+// code...
+
+// getBooksQuery와 BookList 컴포넌트를 연결해주면 된다
+export default graphql(getBooksQuery)(BookList);
+```
+
+위의 상태로 요청을 보내면, CORS 에러가 발생할 것이기에 server에 조취를 취해줘야 한다. 서버 폴더 내에 `npm i cors` 후, app.js 파일에 가서:
+
+```js
+const cors = require("cors");
+
+const app = express();
+
+// allow cross-origin requests
+app.use(cors());
+```
+
+위와 같이 코드를 작성하자.
+
+그리고 클라이언트 사이드로 돌아와서, 위의 요청이 잘 들어왔는지 `console.log(this.props)`로 확인을 할 수 있다. 그리고 이 데이터의 구조가 어떻게 들어왔는지를 살펴보고 필요한 곳에 작성해서 쓰자!
+
+```js
+// for instance,
+displayBooks() {
+    const data = this.props.data;
+
+    if (data.loading) {
+      return <div>Loading books...</div>;
+    } else {
+      return data.books.map(book => {
+        return <li key={book.id}>{book.name}</li>;
+      });
+    }
+  }
+```
+
+---
+
+## External query file
+
+쿼리 요청이 많아지게 되면, 이 코드들을 한 파일에 모아놓고 이들을 import해서 사용하는 것이 코드의 품질 관리에 더욱 유리할 것이다.
+
+```js
+// 파일들에 따로 정의되었던 쿼리들을 한 곳에 모아서 export 하자
+
+import { gql } from "apollo-boost";
+
+const getBooksQuery = gql`
+  {
+    books {
+      name
+      id
+    }
+  }
+`;
+
+const getAuthorsQuery = gql`
+  {
+    authors {
+      name
+      id
+    }
+  }
+`;
+
+export { getAuthorsQuery, getBooksQuery };
+```
+
+한 파일에 하나 이상의 쿼리가 존재할 때는 `{compose}`를 import하여 파일과 쿼리를 묶어줄 수 있다.
+
+```js
+import { graphql, compose } from "react-apollo";
+
+// code ...
+
+// name을 선언해주는 이유는, 이름을 정의 안하고 하나의 쿼리 요청이 있을 때는 data라는 prop 값이 들어왔지만,
+// 여러 개의 쿼리가 있을 때는 각각에 맞는 이름을 설정한 뒤
+// 그에 맞게 데이터를 사용하면 된다
+export default compose(
+  graphql(getAuthorsQuery, { name: "getAuthorsQuery" }),
+  graphql(addBookMutation, { name: "addBookMutation" })
+)(AddBook);
+```
+
+어떻게 하면 addBookMutation을 사용하여 사용자가 서버에 내용을 저장할 수 있을까?
+
+```js
+// queries.js에 이렇게 작성했던 코드를
+const addBookMutation = gql`
+  mutation {
+    addBook(name: "", genre: "", authorId: "") {
+      name
+      id
+    }
+  }
+`;
+
+// 아래와 같이 수정
+// '!'은 변수가 꼭 필요하다는 표시
+const addBookMutation = gql`
+  mutation($name: String!, $genre: String!, $authorId: ID!) {
+    addBook(name: $name, genre: $genre, authorId: $authorId) {
+      name
+      id
+    }
+  }
+`;
+```
+
+만약 submit을 하는 경우에 mutation을 사용한다고 하면:
+
+```js
+// 밑과 같이 variables:{} 를 추가하여 데이터를 서버에 저장시킬 수 있다
+submitForm = e => {
+  const { name, genre, authorId } = this.state;
+  e.preventDefault();
+
+  this.props.addBookMutation({
+    variables: {
+      name,
+      genre,
+      authorId
+    }
+  });
+};
+```
+
+---
+
+## Re-fetching queries
+
+지금은 새로운 책을 추가해도 상태가 바뀌지 않는다. 상태를 바꾸고 새로운 화면으로 업데이트하기 위해서는 새로 바뀐 데이터를 다시 받아오는 과정이 필요하다.
+
+```js
+// getBooksQuery를 추가로 import: 책의 리스트를 다시 업데이트 하기 위해
+import {
+  getAuthorsQuery,
+  addBookMutation,
+  getBooksQuery
+} from "../queries/queries";
+
+submitForm = e => {
+  const { name, genre, authorId } = this.state;
+  e.preventDefault();
+
+  this.props.addBookMutation({
+    variables: {
+      name,
+      genre,
+      authorId
+    },
+    refetchQueries: [{ query: getBooksQuery }]
+  });
+};
+```
+
+---
+
+## Making a single query
+
+책 한권만의 데이터를 가져오고 싶다고 했을 때:
+
+```js
+// get a single book data
+const getBookQuery = gql`
+  query($id: ID) {
+    book(id: $id) {
+      id
+      name
+      genre
+      author {
+        id
+        name
+        age
+        books {
+          name
+          id
+        }
+      }
+    }
+  }
+`;
+```
+
+그리고 난 뒤에, BookDetails라는 컴포넌트를 만들어서 그 곳에서 책 한권의 정보를 보여줄 것인데:
+
+```js
+// code ...
+
+export default graphql(getBookQuery)(BookDetails);
+```
+
+위와 같이 선언하면, prop으로 받는 특정한 책의 id를 모르기 때문에 아무 데이터도 가져올 수가 없다.
+
+그렇기 때문에 export를 할 때:
+
+```js
+export default graphql(getBookQuery, {
+  // prop이 업데이트 될 때마다 새로운 variable들로 업데이트 한다
+  options: props => {
+    return {
+      variables: {
+        id: props.bookId
+      }
+    };
+  }
+})(BookDetails);
+```
+
+---
+
+## Apollo server를 이용한 GraphQL 학습
+
+`npm add apollo-server graphql` 후, `src/index.js` 파일을 생성한 다음에 다음의 코드를 작성하자:
+
+```js
+const { ApolloServer, gql } = require("apollo-server");
+
+// schema or typeDefs
+// '!' = not null
+
+const typeDefs = gql`
+  type Query {
+    hello: String!
+  }
+`;
+
+const resolvers = {
+  Query: {
+    hello: () => "Hello World!"
+  }
+};
+
+const server = new ApolloServer({ typeDefs, resolvers });
+
+server.listen().then(({ url }) => console.log(`server started at ${url}`));
+```
+
+그 후, `node index`(폴더 경로 내에서)로 서버를 실행시키면 `localhost:4000`으로 접속할 수가 있다.
+
+그 후에 쿼리 요청을 보내면서 이것저것을 해보자!
