@@ -1,5 +1,7 @@
 # GraphQL을 알아보자!
 
+참고한 공부 자료: [The Net Ninja의 youtube 영상](https://www.youtube.com/playlist?list=PL4cUxeGkcC9iK6Qhn-QLcXCXPQUov1U7f)
+
 GraphQL은 강력한 쿼리 언어로, 유연하고 효과적으로 클라이언트와 서버가 데이터를 주고받을 수 있도록 해준다.
 
 RESTFful 접근 방식을 살펴보면:
@@ -675,6 +677,8 @@ export default graphql(getBookQuery, {
 ---
 
 ## Apollo server를 이용한 GraphQL 학습
+
+참고한 공부 자료: [Ben Awad의 youtube 영상](https://www.youtube.com/playlist?list=PLN3n1USn4xln0j_NN9k4j5hS1thsGibKi)
 
 `npm add apollo-server graphql` 후, `src/index.js` 파일을 생성한 다음에 다음의 코드를 작성하자:
 
